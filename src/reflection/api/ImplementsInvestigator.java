@@ -1,89 +1,147 @@
 package reflection.api;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.util.Set;
+import java.lang.reflect.*;
+import java.util.*;
 
-public class ImplementsInvestigator {
-
+public class ImplementsInvestigator implements Investigator{
     private Class aClass;
+    private Object obj;
 
     ImplementsInvestigator() {}
 
+    @Override
     public void load(Object someObj) {
+        obj = someObj;
         aClass = someObj.getClass();
     }
 
-    int getTotalNumberOfMethods(){
+    @Override
+    public int getTotalNumberOfMethods(){
         return aClass.getDeclaredMethods().length;
     }
 
+    @Override
     public int getTotalNumberOfConstructors(){
         return aClass.getConstructors().length;
     }
 
-    int getTotalNumberOfFields(){
+    @Override
+    public int getTotalNumberOfFields(){
         return aClass.getDeclaredFields().length;
     }
-    /*Set<String> getAllImplementedInterfaces(){
 
-    }*/
-    int getCountOfConstantFields(){         //not good. need to edit it.
-        Field[] allFields = aClass.getDeclaredFields();
-        int i = 10;
-        return 1;
+    @Override
+    public Set<String> getAllImplementedInterfaces() {
+        return null;
     }
 
-    int getCountOfStaticMethods(){
-        int count = 0;
+    @Override
+    public int getCountOfConstantFields(){
+        Field[] allFields = aClass.getDeclaredFields();
+        int finalCounter = 0;
+        for (Field field: allFields) {
+            if(Modifier.isFinal(field.getModifiers()))
+            {
+                finalCounter++;
+            }
+        }
+        return finalCounter;
+    }
+
+    @Override
+    public int getCountOfStaticMethods(){
+        int StaticCount = 0;
         Method[] methods = aClass.getMethods();
         for (int i = 0; i < methods.length; i++) {
             if(Modifier.isStatic(methods[i].getModifiers())){
-                count++;
+                StaticCount++;
             }
         }
-        return count;
+        return StaticCount;
     }
 
-    boolean isExtending(){
-        Object obj = aClass.getSuperclass();
-        if(obj != null)
+    @Override
+    public boolean isExtending(){
+        Class superClass = aClass.getSuperclass();
+        if(superClass != null)
             return true;
         return false;
     }
 
-    String getParentClassSimpleName(){
+    @Override
+    public String getParentClassSimpleName(){
         if(isExtending()){
             return aClass.getSuperclass().getSimpleName();
         }
         return null;
     }
 
-    boolean isParentClassAbstract(){
+    @Override
+    public boolean isParentClassAbstract(){
         if(isExtending()){
             return Modifier.isAbstract(aClass.getSuperclass().getModifiers());
         }
         return false;
     }
 
-    /*Set<String> getNamesOfAllFieldsIncludingInheritanceChain(){
-
-    }*/
-
-    int invokeMethodThatReturnsInt(String methodName, Object... args){
-        Object[] arr = args;
-        Method func = aClass.getClass().getDeclaredMethod(methodName, args);
+    @Override
+    public int invokeMethodThatReturnsInt(String methodName, Object... args) throws NoSuchMethodException  {
+        try {
+            Method func = aClass.getMethod(methodName);
+            Object value = func.invoke(this.obj, args);
+            return (int)value;
+        } catch(Exception e) {
+            e.printStackTrace();
         }
-
-
-       /* Method func;
-        func = aClass.getClass().getMethod(methodName, new Object[] {args});*/
+        return 0;
     }
 
+    @Override
+    public Object createInstance(int numberOfArgs, Object... args) throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException, NoSuchFieldException {
 
+        try {
+            Class[] argArr = new Class[numberOfArgs];
+            for (int i = 0; i < numberOfArgs; i++)
+                argArr[i] = (Class) args[i].getClass().getField("TYPE").get(null);
 
+            Constructor ctor = aClass.getConstructor(argArr);
+            Object resObj = ctor.newInstance(args);
+            return resObj;
+        }catch(Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 
+    @Override
+    public Object elevateMethodAndInvoke(String name, Class<?>[] parametersTypes, Object... args) {
+        return null;
+    }
+
+    @Override
+    public String getInheritanceChain(String delimiter) {
+        List<String> InheritanceChain = new LinkedList<>();
+        Class Parent = aClass.getClass();
+        do{
+            InheritanceChain.add(new String(Parent.getSimpleName()));
+            Parent = Parent.getSuperclass();
+        } while(Parent != null);
+
+        String stringChain = new String();
+        for (int i = InheritanceChain.toArray().length - 1; i >=0 ; i--) {
+            stringChain += InheritanceChain.get(i);
+
+            if(i-1 >=0){
+                stringChain += delimiter;
+            }
+        }
+        return stringChain;
+    }
+
+    @Override
+    public Set<String> getNamesOfAllFieldsIncludingInheritanceChain() {
+        return null;
+    }
 
 
 
